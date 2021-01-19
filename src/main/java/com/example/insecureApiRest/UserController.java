@@ -1,17 +1,20 @@
 package com.example.insecureApiRest;
 
-import org.apache.coyote.Response;
+import org.apache.tomcat.util.bcel.classfile.Constant;
 import org.apache.velocity.exception.ResourceNotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.config.ConfigDataResourceNotFoundException;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.JdbcOperations;
+import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.ModelAndView;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import javax.persistence.EntityManager;
+import javax.persistence.TypedQuery;
+import java.util.*;
+
+import static org.hibernate.tool.schema.SchemaToolingLogging.LOGGER;
 
 @RestController
 @RequestMapping("/api/v1")
@@ -36,6 +39,7 @@ public class UserController {
         return userRepository.save(user);
     }
 
+
     @PutMapping("/users/{id}")
     public ResponseEntity<User> updateUser (@PathVariable(value = "id") Long userId, @Validated @RequestBody User userDetails) throws  ResourceNotFoundException {
         User user= userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado"));
@@ -55,5 +59,21 @@ public class UserController {
         Map<String, Boolean> response = new HashMap<>();
         response.put("deleted", Boolean.TRUE);
         return response;
+    }
+
+    @PostMapping("/user/generateToken/{id}")
+    public String generateToken(@PathVariable(value = "id") Long userId) {
+        User user = userRepository.findById(userId).orElseThrow(() -> new ResourceNotFoundException("Usuário não encontrado!"));
+        String value = user.getFirstName() + user.getLastName() + user.getId() + user.getCreatedAt();
+        String token = Base64.getEncoder().encodeToString(value.getBytes());
+        return token;
+    }
+
+    @GetMapping("/user/getUser")
+    public List<User> getOrdersUsingWhereClause(EntityManager em, String whereClause) {
+        TypedQuery<User> query = em.createQuery(
+                "SELECT * FROM users WHERE " + whereClause,
+                User.class);
+        return query.getResultList();
     }
 }
